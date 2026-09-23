@@ -42,12 +42,18 @@ git clone https://github.com/yuboliu/wechat-to-obsidian-sync.git \
 
 ### 依赖
 
-只需要 `pyyaml`，脚本自带一个 `.venv` 目录用于跑落库：
+- `scripts/sync_to_vault.py` 需要 **pyyaml**（写 frontmatter）。
+- `scripts/to_obsidian.py` **只用标准库**。
+
+建议直接用仓库自带的 venv（或自建一个），两个步骤都省心：
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install pyyaml        # Windows: .venv/Scripts/pip install pyyaml
 ```
+
+> 用系统裸 `python3` 跑**落库**那步会 `ModuleNotFoundError: No module named 'yaml'`
+> （多数发行版没装 pyyaml）。
 
 ## 用法
 
@@ -55,16 +61,24 @@ python3 -m venv .venv
 且可能带空格，命令里务必加引号）。
 
 ```bash
-SKILL="~/.workbuddy/skills/wechat-to-obsidian-sync"
-BASE="<抓取时的 -o 输出根目录>"
+# 进仓库目录后用「相对路径」调用：跨平台最稳
+cd ~/.workbuddy/skills/wechat-to-obsidian-sync
+PY=".venv/Scripts/python.exe"       # Unix/macOS: .venv/bin/python
+BASE="<抓取时的 -o 输出根目录，建议绝对路径>"
 
 # 1) 转换：原始 md -> .obsidian.md
-python3 "$SKILL/scripts/to_obsidian.py" "$D" --base "$BASE" \
+"$PY" scripts/to_obsidian.py "$D" --base "$BASE" \
     --tags 标签1 标签2 标签3 --date 2026-09-23
 
 # 2) 落库：.obsidian.md -> vault
-"$SKILL/.venv/Scripts/python.exe" "$SKILL/scripts/sync_to_vault.py" "$D" --base "$BASE"
+"$PY" scripts/sync_to_vault.py "$D" --base "$BASE"
 ```
+
+> ⚠️ **Windows / Git Bash**：`$HOME` 展开为 `/c/Users/...`（MSYS 风格），
+> 原生 Windows Python 打不开这种路径（`can't open file 'c:\c\Users\...'`）。
+> 所以别把 `$HOME/...` 拼出的脚本路径当参数传 —— 用上面的 `cd` + 相对路径，
+> 或写成 `C:/Users/...`，或用 `cygpath -w "$p"`。
+> （`"$HOME/.../python.exe"` 作*命令*没问题，只有作*参数*才会炸。）
 
 - `--tags` **必给**，否则 frontmatter 与文末标签为空。
 - 落点 = `vault/<subfolder>/<标题>/<标题>.md`，默认 `subfolder=公众号`。

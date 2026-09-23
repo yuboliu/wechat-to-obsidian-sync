@@ -30,20 +30,31 @@ agent_created: true
 `，？` 替换掉）。
 
 ```bash
-PY="python3"                      # Windows 本机没有 python3，见 references/LOCAL-NOTES.md
-SKILL="~/.workbuddy/skills/wechat-to-obsidian-sync"
-BASE="<抓取时的 -o 输出根目录>"   # 不传 --base 时默认 cwd/output（见 pitfalls #18）
+# 进 skill 目录后用「相对路径」调用：跨平台最稳，也避开 Windows 的 /c/... 路径问题
+cd "$HOME/.workbuddy/skills/wechat-to-obsidian-sync"
+PY=".venv/Scripts/python.exe"     # Unix/macOS 用 .venv/bin/python
+BASE="<抓取时的 -o 输出根目录，建议绝对路径>"   # 不传 --base 时默认 cwd/output（见 pitfalls #18）
 
 # 1) 转换（--tags 必给，否则 frontmatter 与文末标签为空）
-"$PY" "$SKILL/scripts/to_obsidian.py" "$D" --base "$BASE" --tags 标签1 标签2 标签3 --date 2026-09-23
+"$PY" scripts/to_obsidian.py "$D" --base "$BASE" --tags 标签1 标签2 标签3 --date 2026-09-23
 
 # 2) 落库（--vault 默认取 local_config.py / 环境变量 WECHAT_VAULT，通常可省略）
-"$SKILL/.venv/Scripts/python.exe" "$SKILL/scripts/sync_to_vault.py" "$D" --base "$BASE"
+"$PY" scripts/sync_to_vault.py "$D" --base "$BASE"
 ```
+
+> ⚠️ **依赖**：`sync_to_vault.py` 需要 **pyyaml**；`to_obsidian.py` 只用标准库。
+> 为省心两个步骤都用 skill 自带的 `.venv`（已装 pyyaml）。用裸 `python3` 跑落库会
+> `ModuleNotFoundError: No module named 'yaml'`。
+>
+> ⚠️ **Windows / Git Bash 路径**：别把 bash 风格的路径字符串当参数交给原生 Windows Python。
+> `"$HOME/..."` 会展开成 `/c/Users/...`（MSYS 风格）；`"~/..."` 在引号里**不会**展开、
+> 会原样传给 Python（于是它按相对路径找，报 `can't open file 'c:\...\~\.workbuddy\...'`）。
+> 两种情况都会失败。稳妥做法：`cd` 后用**相对路径**（如上），或写成 `C:/Users/...`，
+> 或用 `cygpath -w "$p"` 转换。（`"$HOME/.../python.exe"` 作*命令*没问题，只有作*参数*才会炸。）
 
 落点在 `vault/<subfolder>/<标题>/`，默认 `subfolder=公众号`。
 
-落库脚本**自包含**：只用 pyyaml（本 skill 自带 `.venv` 已装）。2026-09-23 起不再依赖
+两个脚本**自包含**：只依赖 pyyaml（本 skill 自带 `.venv` 已装）。2026-09-23 起不再依赖
 `obsidian-direct`（该 skill 已卸载），`create_note()` 的实现内联在 `sync_to_vault.py` 里，
 输出与原版逐字节一致。
 
@@ -54,14 +65,15 @@ BASE="<抓取时的 -o 输出根目录>"   # 不传 --base 时默认 cwd/output�
 **统一入口就是主脚本本身**——默认 `--mode auto`：先 `requests` 直取，命中风控才自动升浏览器：
 
 ```bash
-SK="$HOME/.workbuddy/skills/wechat-article-to-markdown"
-"$SK/.venv/Scripts/python.exe" "$SK/wechat_article_to_markdown.py" "<URL>" -o "<BASE>"
+# 同样用 cd + 相对路径（Windows 的 /c/... 路径问题见上方 Quick Start 提示）
+cd "$HOME/.workbuddy/skills/wechat-article-to-markdown"
+./.venv/Scripts/python.exe wechat_article_to_markdown.py "<URL>" -o "<BASE>"
 ```
 
 只想走最快的非浏览器模式（推荐，公众号正文是服务端渲染的）：
 
 ```bash
-"$SK/.venv/Scripts/python.exe" "$SK/wechat_article_to_markdown.py" "<URL>" -o "<BASE>" --mode requests
+./.venv/Scripts/python.exe wechat_article_to_markdown.py "<URL>" -o "<BASE>" --mode requests
 ```
 
 > ⚠️ 本机 camoufox 二进制无法被自动化驱动（浏览器进程能起，但 chrome window 初始化不完成，
@@ -103,8 +115,9 @@ SK="$HOME/.workbuddy/skills/wechat-article-to-markdown"
 改过转换规则后跑一遍合成样本，确认规则真生效、且不误伤（尤其 `C:\Users` 和独立行 `****`）：
 
 ```bash
+# 在 skill 目录下执行（$PY 见 Quick Start）
 # 样本放 <BASE>/_selftest/_selftest.md，内容见 references/pitfalls.md 各条的「坏例子」
-"$PY" "$SKILL/scripts/to_obsidian.py" "_selftest" --tags 测试 --base "<BASE>"
+"$PY" scripts/to_obsidian.py "_selftest" --tags 测试 --base "<BASE>"
 ```
 
 再对本篇已落库的文章重跑一次做回归，产出应与之前逐字节一致（除 `created` 时间）。

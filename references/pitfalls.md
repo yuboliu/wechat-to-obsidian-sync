@@ -169,19 +169,21 @@ r'!\[[^\]]*\]\(images/([^)\s]+)(?:\s+"[^"]*")?\)'
 有的文章首图区是 3~4 张连图（`img_000`~`img_003`）加一段标题文字，属于公众号封面模板，
 正文不需要。判断方法：这几张图紧挨在 H1 附近且彼此内容相似，删到只剩第一张或全删。
 
-## 16. vault 根 = 含 `.obsidian` 的目录，路径只留一个常量
+## 16. vault 根 = 含 `.obsidian` 的目录，本机路径只留一个「本机配置」
 
 落库脚本的 `--vault` 要传 **vault 根**，不是笔记所在的分类目录。
 
-- 本机 vault 根：`~\iNote`（该目录下有 `.obsidian`）。
+- 默认解析顺序：环境变量 `WECHAT_VAULT` → `scripts/local_config.py` → `~/iNote`。
 - ⚠️ 2026-09-23 用户重构过目录：原先 iNote 下还多一层 `知识库`（即 `iNote\知识库\公众号\...`），
   该层**已取消**，现在是 `iNote\公众号\...`。
 
 这类路径变更的隐蔽之处：**改了不会报错**。脚本会老实地在（新建的）旧路径下写出一份笔记，
 Obsidian 里却看不到 —— 你会以为同步失败，实际是写到了别处。
 
-所以路径只保留**一个权威常量** `sync_to_vault.py::DEFAULT_VAULT`，命令行一律走默认值，
-不要把它复制进 SKILL.md 的示例命令、记忆文件或临时脚本里。脚本已加两道保险：
+所以本机路径只保留**一处权威来源**：`scripts/local_config.py` 里的 `DEFAULT_VAULT`
+（该文件已在 `.gitignore` 中）。命令行一律走默认值，**不要**把它复制进 SKILL.md 的示例命令、
+记忆文件或临时脚本里，更**不要写回 `sync_to_vault.py`** —— 那会让 `git pull` 次次冲突，
+`git push` 还会把你的本机绝对路径公开出去。脚本已加两道保险：
 `--vault` 不存在直接 `SystemExit`；存在但其下没有 `.obsidian` 时打 WARN（不拦，兼容非标准 vault）。
 
 ## 17. 落库后必须归一化换行符（CRLF 污染）
@@ -209,8 +211,8 @@ Windows 下用文本模式写文件（`Path.write_text()` / `open(..., 'w')`）�
 把这个死路径**重新建出来**，笔记写进去后 vault 里自然看不到，排查时极易误判为「同步失败」。
 
 处理：两个脚本的 `DEFAULT_BASE` 已改为 `cwd/output`（与抓取器 `DEFAULT_OUTPUT_DIR` 一致），
-命令行仍可用 `--base` 覆盖。**BASE 与 VAULT 都不要复制进文档或临时脚本**，只留在
-`scripts/*.py` 顶部的常量里 —— 和 `DEFAULT_VAULT` 同一条原则（见第 16 条）。
+命令行仍可用 `--base` 覆盖。**BASE 与 VAULT 都不要复制进文档或临时脚本**：`BASE` 跟随
+cwd 即可，`VAULT` 放 `scripts/local_config.py`（见第 16 条）。
 
 ## 19. 章节标题是样式块，不是 `<h1-6>`
 

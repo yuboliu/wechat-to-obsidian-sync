@@ -18,3 +18,7 @@ output/
 .DS_Store
 Thumbs.db
 *.log
+
+# 本机专用（各人机器上的绝对路径/解释器，不入库）
+scripts/local_config.py
+references/LOCAL-NOTES.md

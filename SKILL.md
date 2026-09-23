@@ -8,6 +8,11 @@ agent_created: true
 
 把「抓取 → 转换 → 校验 → 落库」中的**转换 + 落库**两段标准化，避免每次重写脚本。
 
+> **本机专用配置**：vault 根、本机解释器路径这类「各人不同」的值**不要写进本文件**。
+> 它们放在 `scripts/local_config.py`（已被 `.gitignore` 忽略）；若同目录存在
+> `references/LOCAL-NOTES.md`，其中的路径**优先**于本文档的示例。
+> **在本机运行前先看 `references/LOCAL-NOTES.md`。**
+
 ## 上游 / 下游
 
 | 环节 | 用什么 |
@@ -25,14 +30,14 @@ agent_created: true
 `，？` 替换掉）。
 
 ```bash
-PY="python3"
+PY="python3"                      # Windows 本机没有 python3，见 references/LOCAL-NOTES.md
 SKILL="~/.workbuddy/skills/wechat-to-obsidian-sync"
 BASE="<抓取时的 -o 输出根目录>"   # 不传 --base 时默认 cwd/output（见 pitfalls #18）
 
 # 1) 转换（--tags 必给，否则 frontmatter 与文末标签为空）
 "$PY" "$SKILL/scripts/to_obsidian.py" "$D" --base "$BASE" --tags 标签1 标签2 标签3 --date 2026-09-23
 
-# 2) 落库（--vault 默认就是本机 vault 根，通常可省略）
+# 2) 落库（--vault 默认取 local_config.py / 环境变量 WECHAT_VAULT，通常可省略）
 "$SKILL/.venv/Scripts/python.exe" "$SKILL/scripts/sync_to_vault.py" "$D" --base "$BASE"
 ```
 

@@ -6,8 +6,9 @@
                           [--subfolder 公众号] [--folder 自定义子目录]
 
 约定（重要）:
-  * --vault 传的是 **vault 根**，即那个装有 .obsidian 的目录。2026-09-23 用户重构目录后，
-    本机 vault 根 = ~\iNote（原先多一层 iNote\\知识库，已取消）。
+  * --vault 传的是 **vault 根**，即那个装有 .obsidian 的目录。
+    默认值按 `WECHAT_VAULT` 环境变量 → 同目录 `local_config.py` → `~/iNote` 的顺序解析，
+    所以「本机 vault 在哪」属于本机配置，不进版本库（见 resolve_vault()）。
   * 笔记落点 = vault/<subfolder>/<标题>/<标题>.md，默认 subfolder=公众号。
     这样才能让 ![[images/xxx]] 这种相对嵌入正确解析，否则图片会全挤进 vault/images/ 互相覆盖。
   * 只复制正文真正引用到的图片，推广图/二维码不复制（保持 vault 干净）。
@@ -21,6 +22,7 @@
 """
 import argparse
 import datetime
+import os
 import re
 import shutil
 from pathlib import Path
@@ -31,8 +33,32 @@ import yaml
 # 无 --base 时会静默把 output 重建到死路径（pitfalls #18）。改为跟随当前工作目录，
 # 与抓取器 wechat_article_to_markdown.py 的 DEFAULT_OUTPUT_DIR（cwd/output）保持一致。
 DEFAULT_BASE = str(Path.cwd() / "output")
-# vault 根（含 .obsidian）。目录结构变动时只需改这里。
-DEFAULT_VAULT = str(Path.home() / "iNote")
+DEFAULT_SUBFOLDER = "公众号"
+
+
+def resolve_vault() -> str:
+    """解析 vault 根（那个装有 .obsidian 的目录）。
+
+    取值优先级 —— 这样同一份代码能在不同机器上跑，而本机绝对路径不必进版本库：
+      1. 环境变量 `WECHAT_VAULT`
+      2. 同目录 `local_config.py` 里的 `DEFAULT_VAULT`（本机专用，已 gitignore）
+      3. 中性默认 `~/iNote`
+
+    换 vault 目录时：优先改本机 `local_config.py`，不要把绝对路径写回这里。
+    """
+    env = os.environ.get("WECHAT_VAULT")
+    if env:
+        return env
+    try:
+        from local_config import DEFAULT_VAULT as local_vault
+    except ImportError:
+        local_vault = None
+    if local_vault:
+        return str(local_vault)
+    return str(Path.home() / "iNote")
+
+
+DEFAULT_VAULT = resolve_vault()
 DEFAULT_SUBFOLDER = "公众号"
 
 
@@ -88,7 +114,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dir_name", help="文章目录名（output 下的子目录）")
     ap.add_argument("--vault", default=DEFAULT_VAULT,
-                    help="vault 根（含 .obsidian 的目录），默认取本机 iNote")
+                    help="vault 根（含 .obsidian 的目录）；默认 WECHAT_VAULT 环境变量 > "
+                         "scripts/local_config.py > ~/iNote")
     ap.add_argument("--base", default=DEFAULT_BASE, help="output 根目录")
     ap.add_argument("--subfolder", default=DEFAULT_SUBFOLDER,
                     help="vault 下的一级分类目录，默认 公众号")

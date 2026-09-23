@@ -68,18 +68,32 @@ python3 "$SKILL/scripts/to_obsidian.py" "$D" --base "$BASE" \
 
 - `--tags` **必给**，否则 frontmatter 与文末标签为空。
 - 落点 = `vault/<subfolder>/<标题>/<标题>.md`，默认 `subfolder=公众号`。
-- `--vault` 默认取脚本里的 `DEFAULT_VAULT`，通常不用传。
+- `--vault` 不传时按下面的优先级自动解析，通常不用给。
 
 ### 配置 vault 路径
 
-vault 根 = 那个装有 `.obsidian` 的目录。脚本里集中在一个常量：
+vault 根 = 那个装有 `.obsidian` 的目录。**你自己的 vault 路径不该进版本库**，所以按优先级取：
+
+| 优先级 | 来源 | 说明 |
+|---|---|---|
+| 1 | 环境变量 `WECHAT_VAULT` | 临时切换/CI 用 |
+| 2 | `scripts/local_config.py` | **推荐**。本机专用，已在 `.gitignore` 里 |
+| 3 | `~/iNote` | 中性默认，克隆后不改也能跑（前提是 vault 真在那） |
+
+`scripts/local_config.py` 就一行：
 
 ```python
-# scripts/sync_to_vault.py
-DEFAULT_VAULT = str(Path.home() / "iNote")
+# scripts/local_config.py  —— 本机专用，不要提交
+DEFAULT_VAULT = r"D:\MyVault"
 ```
 
-改目录时**只改这一处**，不要散落到别处或写进命令行。
+```bash
+# 或临时用环境变量
+WECHAT_VAULT="D:/MyVault" python scripts/sync_to_vault.py "$D" --base "$BASE"
+```
+
+改 vault 目录时**只改 `local_config.py`**，不要把绝对路径写回 `sync_to_vault.py`
+（否则下次 `git pull` 会冲突，push 还会把你本机路径公开出去）。
 
 ## 转换脚本做了什么
 
